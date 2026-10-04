@@ -1,0 +1,23 @@
+appId: com.local.livecommentoverlay
+productName: Live Comment Overlay
+directories:
+  buildResources: build
+files:
+  - out/**
+  - package.json
+asar: true
+compression: maximum
+electronLanguages:
+  - en-US
+  - id
+win:
+  icon: build/icon.png
+  target:
+    - nsis
+    - portable
+nsis:
+  # Nama berkas tanpa spasi agar nama di GitHub Releases dan di checksum sama persis
+  artifactName: ${name}-setup-${version}.${ext}
+  oneClick: true
+  perMachine: false
+  deleteAppDataOnUninstall: false

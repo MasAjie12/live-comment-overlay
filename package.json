@@ -1,0 +1,31 @@
+{
+  "name": "live-comment-overlay",
+  "version": "1.0.0",
+  "description": "Overlay ringan untuk memantau komentar live TikTok dan YouTube (komentar, penonton, like, gift) di atas aplikasi lain",
+  "main": "./out/main/index.js",
+  "private": true,
+  "license": "MIT",
+  "author": "AS GAME",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "typecheck": "tsc --noEmit",
+    "dist": "electron-vite build && electron-builder --win nsis --x64",
+    "dist:portable": "electron-vite build && electron-builder --win portable --x64"
+  },
+  "dependencies": {
+    "tiktok-live-connector": "^2.0.0",
+    "youtubei.js": "^13.1.0"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.9.0",
+    "@types/node": "^20.14.0",
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.0",
+    "electron-vite": "^2.3.0",
+    "preact": "^10.24.0",
+    "typescript": "^5.6.0",
+    "vite": "^5.4.0"
+  }
+}
