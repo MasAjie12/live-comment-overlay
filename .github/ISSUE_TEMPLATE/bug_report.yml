@@ -1,0 +1,63 @@
+name: Laporan bug / Bug report
+description: Laporkan masalah pada aplikasi / Report a problem with the app
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Terima kasih sudah menguji versi beta! / Thanks for testing the beta!
+        **Jangan menempel API key, token, atau data pribadi.** / **Do not paste API keys, tokens, or personal data.**
+  - type: input
+    id: version
+    attributes:
+      label: Versi aplikasi / App version
+      description: Lihat nama berkas installer atau halaman Releases. / See the installer file name or the Releases page.
+      placeholder: 1.0.0-beta.1
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Bagian yang bermasalah / Affected part
+      options:
+        - TikTok
+        - YouTube
+        - Keduanya / Both
+        - Aplikasi itu sendiri (jendela, installer, pengaturan) / The app itself (window, installer, settings)
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Versi Windows / Windows version
+      placeholder: Windows 11 23H2
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: Apa yang terjadi? Apa yang kamu harapkan? / What happened? What did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Langkah untuk mengulang masalah / Steps to reproduce
+      placeholder: |
+        1. ...
+        2. ...
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Laporan diagnostik / Diagnostic report
+      description: |
+        Untuk masalah angka atau komentar: Pengaturan (ikon gir) lalu Diagnostik TikTok atau Diagnostik YouTube (klik "Buat laporan"), lalu tempel isinya.
+        For number or comment problems: Settings (gear icon), then the TikTok or YouTube diagnostics ("Buat laporan"), and paste the text.
+      render: text
+  - type: textarea
+    id: logs
+    attributes:
+      label: Isi log / Log contents
+      description: |
+        Jika aplikasi tidak mau terbuka: isi startup.log dan error.log di %APPDATA%\live-comment-overlay\
+        If the app will not open: contents of startup.log and error.log in %APPDATA%\live-comment-overlay\
+      render: text
