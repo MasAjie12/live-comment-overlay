@@ -94,6 +94,19 @@ export interface Diag {
   notif?: Record<string, number>
   /** nama field (bukan isi) dari pesan pertama tiap jenis, untuk membantu pencocokan */
   fields: Record<string, string[]>
+  /** statistik emoji pada komentar */
+  emoji?: {
+    /** komentar yang memuat kode [xxx] */
+    withCode: number
+    /** kode yang berhasil diganti emoji */
+    converted: number
+    /** kode yang belum dikenal -> jumlah kemunculan */
+    unknown: Record<string, number>
+    /** komentar dengan field emotes berisi gambar */
+    withEmotes: number
+    /** contoh isi mentah field emotes */
+    emoteSamples: string[]
+  }
 }
 
 export interface Settings {

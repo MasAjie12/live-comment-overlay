@@ -145,6 +145,21 @@ export function SettingsPanel({ settings, onChange }: Props) {
                 : 'belum ada'}
             </div>
             <div>Pesan sosial (follow/share): {diag.socialProbe ?? 'belum ada'}</div>
+            <div>
+              Emoji komentar: kode [xxx] ditemukan di {diag.emoji?.withCode ?? 0} komentar, diganti emoji{' '}
+              {diag.emoji?.converted ?? 0}x, komentar beremotes gambar {diag.emoji?.withEmotes ?? 0}
+            </div>
+            <div>
+              Kode emoji belum dikenal:{' '}
+              {diag.emoji && Object.keys(diag.emoji.unknown).length
+                ? Object.entries(diag.emoji.unknown)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 15)
+                    .map(([k, v]) => `[${k}] ${v}x`)
+                    .join(', ')
+                : 'tidak ada'}
+            </div>
+            {diag.emoji?.emoteSamples.length ? <div>Contoh emotes mentah: {diag.emoji.emoteSamples.join(' | ')}</div> : null}
             {diag.lastError ? <div class="diag-err">Error terakhir: {diag.lastError}</div> : null}
           </div>
         ) : null}

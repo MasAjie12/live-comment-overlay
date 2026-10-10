@@ -1,5 +1,6 @@
 import type { BrowserWindow } from 'electron'
-import type { Batch, ChatItem, ConnState, Diag, EventItem, EventKind, GiftItem, Stats, StatusPayload } from '../shared/types'
+import type { Batch, ChatItem, ChatPart, ConnState, Diag, EventItem, EventKind, GiftItem, Stats, StatusPayload } from '../shared/types'
+import { convertTikTokEmoji } from '../shared/tiktokEmoji'
 import { loadSettings } from './settings'
 
 const MAX_PENDING_CHATS = 100
@@ -170,6 +171,75 @@ function giftLevelOf(d: any): { level?: number; source?: string } {
   return {}
 }
 
+/** URL gambar emote (emote kustom kreator) dari satu elemen field `emotes`, hanya https */
+function emoteImage(e: any): string | undefined {
+  const cands = [e?.emote?.image?.imageUrl, e?.emote?.image?.urlList?.[0], e?.image?.imageUrl, e?.image?.urlList?.[0], e?.imageUrl]
+  for (const u of cands) {
+    if (typeof u !== 'string' || !/^(https?:)?\/\//i.test(u)) continue
+    return u.startsWith('//') ? `https:${u}` : u.replace(/^http:/i, 'https:')
+  }
+  return undefined
+}
+
+interface BuiltChat {
+  text: string
+  parts?: ChatPart[]
+  codes: number
+  converted: number
+  unknown: string[]
+  emoteCount: number
+}
+
+/**
+ * Susun isi komentar TikTok: kode emoji bawaan [xxx] diganti emoji Unicode, dan emote bergambar
+ * (field `emotes`) disisipkan sebagai gambar pada posisinya (placeInComment).
+ */
+function buildChat(raw: string, emotes: any): BuiltChat {
+  const items: { at: number; url: string; alt: string }[] = []
+  if (Array.isArray(emotes)) {
+    for (const e of emotes) {
+      const url = emoteImage(e)
+      if (!url) continue
+      const at = toNum(e?.placeInComment ?? e?.place_in_comment)
+      items.push({
+        at: Number.isFinite(at) ? Math.max(0, Math.min(at, raw.length)) : raw.length,
+        url,
+        alt: String(e?.emote?.emoteId ?? e?.emoteId ?? '')
+      })
+    }
+  }
+  items.sort((a, b) => a.at - b.at)
+
+  const agg = { codes: 0, converted: 0, unknown: [] as string[] }
+  const conv = (s: string): string => {
+    const r = convertTikTokEmoji(s)
+    agg.codes += r.codes
+    agg.converted += r.converted
+    agg.unknown.push(...r.unknown)
+    return r.text
+  }
+  if (!items.length) return { text: conv(raw), ...agg, emoteCount: 0 }
+
+  const parts: ChatPart[] = []
+  let text = ''
+  const addText = (s: string): void => {
+    if (!s) return
+    const c = conv(s)
+    text += c
+    const last = parts[parts.length - 1]
+    if (last && last.t === 'text') last.v += c
+    else parts.push({ t: 'text', v: c })
+  }
+  let pos = 0
+  for (const it of items) {
+    addText(raw.slice(pos, it.at))
+    pos = it.at
+    parts.push({ t: 'emoji', url: it.url, alt: it.alt })
+  }
+  addText(raw.slice(pos))
+  return { text: text.trim(), parts, ...agg, emoteCount: items.length }
+}
+
 const emptyDiag = (): Omit<Diag, 'state'> => ({ wsMessages: 0, events: {}, fields: {}, notif: {} })
 
 export class TikTokService {
@@ -235,7 +305,8 @@ export class TikTokService {
       ...this.diag,
       events: { ...this.diag.events },
       fields: { ...this.diag.fields },
-      notif: { ...this.diag.notif }
+      notif: { ...this.diag.notif },
+      emoji: this.diag.emoji && { ...this.diag.emoji, unknown: { ...this.diag.emoji.unknown } }
     }
   }
 
@@ -385,14 +456,16 @@ export class TikTokService {
   private extract(kind: Kind, d: any): boolean {
     switch (kind) {
       case 'chat': {
-        const text = firstString(d, ['comment', 'content', 'text', 'message', 'msg'])
-        if (!text) return false
+        const raw = firstString(d, ['comment', 'content', 'text', 'message', 'msg']) ?? ''
+        const built = buildChat(raw, d?.emotes)
+        if (!built.text && !built.parts) return false
+        this.noteEmoji(built, d?.emotes)
         const u = userOf(d)
         this.markSeen(u.id)
         const lv = giftLevelOf(d)
         this.probeLevel(d)
         if (lv.level && !this.diag.levelSource) this.diag.levelSource = lv.source
-        this.chats.push({ id: ++this.seq, platform: 'tiktok', user: u.user, nick: u.nick || u.user, text, avatar: u.avatar, level: lv.level })
+        this.chats.push({ id: ++this.seq, platform: 'tiktok', user: u.user, nick: u.nick || u.user, text: built.text, parts: built.parts, avatar: u.avatar, level: lv.level })
         if (this.chats.length > MAX_PENDING_CHATS) this.chats.splice(0, this.chats.length - MAX_PENDING_CHATS)
         return true
       }
@@ -454,6 +527,29 @@ export class TikTokService {
           this.statsDirty = true
         }
         return true
+      }
+    }
+  }
+
+  /** Catat statistik emoji untuk Diagnostik: kode yang belum dikenal dan contoh isi field emotes */
+  private noteEmoji(b: BuiltChat, emotes: any): void {
+    const e =
+      this.diag.emoji ?? (this.diag.emoji = { withCode: 0, converted: 0, unknown: {}, withEmotes: 0, emoteSamples: [] })
+    if (b.codes) e.withCode++
+    e.converted += b.converted
+    for (const name of b.unknown) {
+      if (e.unknown[name] !== undefined || Object.keys(e.unknown).length < 40) e.unknown[name] = (e.unknown[name] ?? 0) + 1
+    }
+    if (Array.isArray(emotes) && emotes.length) {
+      e.withEmotes++
+      if (e.emoteSamples.length < 3) {
+        try {
+          e.emoteSamples.push(
+            JSON.stringify(emotes[0], (_k, v) => (typeof v === 'bigint' ? v.toString() : v)).slice(0, 300)
+          )
+        } catch {
+          /* abaikan */
+        }
       }
     }
   }
