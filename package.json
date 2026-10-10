@@ -1,6 +1,6 @@
 {
   "name": "live-comment-overlay",
-  "version": "1.0.0-beta.1",
+  "version": "1.0.0-beta.2",
   "description": "Overlay ringan untuk memantau komentar live TikTok dan YouTube (komentar, penonton, like, gift) di atas aplikasi lain",
   "main": "./out/main/index.js",
   "private": true,
