@@ -252,6 +252,8 @@ input { font: inherit; color: inherit; }
 .comment.paid-member { border-left-color: var(--live); background: rgba(76, 214, 148, 0.1); }
 .paid-amt { font-weight: 700; color: var(--gift); margin-right: 6px; }
 .paid-member .paid-amt { color: var(--live); }
+.comment.paid-gift { border-left-color: #c77dff; background: rgba(199, 125, 255, 0.12); }
+.paid-gift .paid-amt { color: #c77dff; }
 .avatar { border-radius: 50%; vertical-align: -5px; margin-right: 6px; background: var(--line); }
 
 .empty { color: var(--muted); padding: 14px 4px; text-align: center; }

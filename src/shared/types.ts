@@ -11,7 +11,7 @@ export type ConnState =
 
 /** Komentar berbayar / khusus YouTube: Super Chat, Super Sticker, atau member baru */
 export interface PaidInfo {
-  kind: 'superchat' | 'sticker' | 'member'
+  kind: 'superchat' | 'sticker' | 'member' | 'gift'
   /** mis. "Rp50.000" atau "$5.00" (teks asli dari YouTube) */
   amount?: string
 }

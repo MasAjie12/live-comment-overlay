@@ -7,6 +7,7 @@ function paidLabel(c: ChatItem): string {
   const p = c.paid
   if (!p) return ''
   if (p.kind === 'member') return 'Member baru'
+  if (p.kind === 'gift') return p.amount ? `Gift ${p.amount}` : 'Gift'
   if (p.kind === 'sticker') return p.amount ? `Sticker ${p.amount}` : 'Sticker'
   return p.amount ?? 'Super Chat'
 }

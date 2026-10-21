@@ -6,7 +6,6 @@ Overlay ringan untuk memantau live **TikTok** dan **YouTube** dari jendela kecil
 aplikasi lain (misalnya game). Menampilkan komentar, jumlah penonton, total penonton, dan like secara
 realtime.
 
-> **Status: beta.** Aplikasi ini masih dalam tahap uji dan mungkin masih punya bug. Temukan masalah? Lihat
 > [Melaporkan masalah](#melaporkan-masalah).
 
 Dibuat dengan Electron, Preact, dan TypeScript. Memakai [`tiktok-live-connector`](https://github.com/zerodytrash/TikTok-Live-Connector)
@@ -74,6 +73,10 @@ Posisi, ukuran, dan semua pengaturan tersimpan otomatis.
 - `tiktok-live-connector` adalah library tidak resmi. Bisa berhenti bekerja jika TikTok mengubah sistemnya, dan bisa
   kena rate limit. Jika sering terjadi, update: `npm update tiktok-live-connector`.
 - Opsional: isi API key Euler Stream di Pengaturan (atau variabel lingkungan `EULER_API_KEY`) untuk mengurangi rate limit.
+- Emoji bawaan TikTok dikirim sebagai kode teks, mis. `[laughcry]`. Aplikasi menggantinya dengan emoji Unicode yang
+  paling mendekati artinya (gambar aslinya hanya ada di aplikasi TikTok, jadi tampilannya tidak persis sama). Kode yang
+  belum dikenal tetap tampil apa adanya dan dicatat di *Diagnostik koneksi TikTok*. Untuk menambah, edit
+  `src/shared/tiktokEmoji.ts` (satu baris per kode). Emote bergambar milik kreator tampil sebagai gambar.
 - "Total" TikTok adalah perkiraan: penonton unik yang terdeteksi (masuk, komentar, like, gift) sejak Connect, minimal
   sebesar puncak jumlah penonton.
 
@@ -83,6 +86,9 @@ Posisi, ukuran, dan semua pengaturan tersimpan otomatis.
 - "Total" adalah total penayangan dari YouTube (`view_count`). Angka ini dan like diambil ulang tiap 60 detik, sedangkan
   jumlah penonton saat ini diperbarui tiap beberapa detik. YouTube sendiri menaikkan total dalam bongkahan, jadi
   sesekali angkanya tampak diam lalu melompat.
+- Gift YouTube (Jewels / Crystal) yang masuk ke chat tampil sebagai baris ungu dengan ikon gift dan nominalnya, mis.
+  "Gift 100". Animasi gift di atas video tidak ditampilkan. Dukungan ini baru diuji pada satu jenis gift; jika ada
+  gift yang tidak muncul, kirim hasil *Diagnostik YouTube* (bagian "tipe item chat").
 - Riwayat chat sebelum Connect tidak dimuat. Live yang chat-nya dimatikan, privat, atau khusus member tidak bisa dibaca.
 
 **Umum**

@@ -108,7 +108,13 @@ function parseCount(v: unknown): number | undefined {
 
 /** URL gambar emoji kustom (pilih yang >= 32px, atau yang terbesar), hanya https */
 function emojiImage(img: any): string | undefined {
-  const list: any[] = Array.isArray(img) ? img : Array.isArray(img?.thumbnails) ? img.thumbnails : []
+  const list: any[] = Array.isArray(img)
+    ? img
+    : Array.isArray(img?.thumbnails)
+      ? img.thumbnails
+      : Array.isArray(img?.sources)
+        ? img.sources
+        : []
   const pick = list.find((t) => (t?.width ?? 0) >= 32) ?? list[list.length - 1]
   let url = pick?.url
   if (typeof url !== 'string') return undefined
@@ -167,6 +173,65 @@ function watchingFrom(info: any): number | undefined {
   return parseCount(vc?.original_view_count) ?? parseCount(vc?.view_count)
 }
 
+/** Nama tipe item chat yang kemungkinan gift YouTube (Jewels / Crystal / item virtual) */
+const GIFT_TYPE = /gift|jewel|crystal|virtual|product/i
+
+/** Teks dari view model YouTube (objek { content, styleRuns }) atau string / Text biasa */
+function viewText(x: any): string {
+  if (typeof x?.content === 'string') return x.content.trim()
+  return str(x)
+}
+
+/**
+ * Ambil teks, nominal, dan gambar dari item chat bertipe gift.
+ * - GiftMessageView (gift Jewels / Crystal, terlihat di Diagnostik): teks di `text.content` ("sent 100"),
+ *   nama di `author_name.content`, ikon gift di `gift_image.sources`.
+ * - Tipe gift lain: nama field dicoba satu per satu (belum terverifikasi).
+ */
+function giftOf(item: any): { msg: { text: string; parts?: ChatPart[] }; amount?: string } {
+  const cands = [
+    item?.message,
+    item?.header_primary_text,
+    item?.header?.primary_text,
+    item?.header_subtext,
+    item?.header?.subtext,
+    item?.primary_text,
+    item?.text,
+    item?.description
+  ]
+  let msg: { text: string; parts?: ChatPart[] } = { text: '' }
+  for (const c of cands) {
+    const m = readMessage(c)
+    if (m.text || m.parts) {
+      msg = m
+      break
+    }
+  }
+  if (!msg.text && !msg.parts) {
+    const t = viewText(item?.text) || str(item?.gift_image_a11y_label)
+    if (t) msg = { text: t }
+  }
+  const vm = viewText(item?.text)
+  const label = str(item?.gift_image_a11y_label)
+  const amount =
+    str(item?.purchase_amount) ||
+    str(item?.amount) ||
+    str(item?.price) ||
+    // "sent 100" -> 100. Label a11y memuat nama (bisa berisi angka), jadi hanya angka di ujung yang diambil
+    vm.match(/\d[\d.,]*/)?.[0] ||
+    label.match(/(\d[\d.,]*)\s*$/)?.[1] ||
+    undefined
+  // Ikon gift (mis. Crystal) ditampilkan sebagai gambar; teks asli hanya ikut bila nominal tidak terbaca
+  const img = emojiImage(item?.gift_image)
+  if (img) {
+    const parts: ChatPart[] = []
+    if (msg.text && !amount) parts.push({ t: 'text', v: `${msg.text} ` })
+    parts.push({ t: 'emoji', url: img, alt: 'gift' })
+    msg = { text: msg.text, parts }
+  }
+  return { msg, amount }
+}
+
 function avatarOf(author: any): string | undefined {
   const url = author?.thumbnails?.[0]?.url
   if (typeof url !== 'string') return undefined
@@ -179,10 +244,15 @@ function avatarOf(author: any): string | undefined {
  * view/count/watch/total/like/concurrent beserta nilainya. Dipakai untuk laporan diagnostik
  * agar terlihat field mana yang benar-benar dikirim YouTube.
  */
-function scanKeys(root: unknown, rootName: string, maxDepth = 6, maxHits = 60): string[] {
+function scanKeys(
+  root: unknown,
+  rootName: string,
+  maxDepth = 6,
+  maxHits = 60,
+  KEY: RegExp = /view|count|watch|total|like|concurrent/i
+): string[] {
   const out: string[] = []
   const seen = new WeakSet<object>()
-  const KEY = /view|count|watch|total|like|concurrent/i
   const walk = (v: any, path: string, depth: number): void => {
     if (out.length >= maxHits || v === null || typeof v !== 'object' || seen.has(v) || depth > maxDepth) return
     seen.add(v)
@@ -228,6 +298,10 @@ interface DebugInfo {
   emojiSamples: string[]
   mdShape: string
   mdWithViews: number
+  actionTypes: Record<string, number>
+  itemTypes: Record<string, number>
+  unknownSamples: string[]
+  actionSamples: string[]
 }
 
 const emptyDebug = (): DebugInfo => ({
@@ -242,7 +316,11 @@ const emptyDebug = (): DebugInfo => ({
   refreshLog: [],
   emojiSamples: [],
   mdShape: '',
-  mdWithViews: 0
+  mdWithViews: 0,
+  actionTypes: {},
+  itemTypes: {},
+  unknownSamples: [],
+  actionSamples: []
 })
 
 export class YouTubeService {
@@ -338,6 +416,22 @@ export class YouTubeService {
     lines.push('[riwayat jam | penonton | like | teks view_count]')
     for (const r of d.series) lines.push(`${r.t} | ${r.viewers ?? '-'} | ${r.likes ?? '-'} | ${r.raw || '-'}`)
     if (!d.series.length) lines.push('(belum ada)')
+    lines.push('')
+    lines.push('[tipe aksi chat yang diterima]')
+    for (const [k, v] of Object.entries(d.actionTypes)) lines.push(`${k}: ${v}`)
+    if (!Object.keys(d.actionTypes).length) lines.push('(belum ada)')
+    lines.push('')
+    lines.push('[contoh aksi chat selain pesan biasa]')
+    for (const r of d.actionSamples) lines.push(r)
+    if (!d.actionSamples.length) lines.push('(tidak ada)')
+    lines.push('')
+    lines.push('[tipe item chat yang diterima]')
+    for (const [k, v] of Object.entries(d.itemTypes)) lines.push(`${k}: ${v}`)
+    if (!Object.keys(d.itemTypes).length) lines.push('(belum ada)')
+    lines.push('')
+    lines.push('[contoh item chat yang tidak dikenal]')
+    for (const r of d.unknownSamples) lines.push(r)
+    if (!d.unknownSamples.length) lines.push('(tidak ada)')
     lines.push('')
     lines.push('[contoh emoji mentah]')
     for (const r of d.emojiSamples) lines.push(r)
@@ -442,9 +536,17 @@ export class YouTubeService {
       })
 
     on('chat-update', (action: any) => {
-      if (action?.type !== 'AddChatItemAction') return
-      this.addItem(action.item)
+      const at = String(action?.type ?? 'unknown')
+      if (at === 'AddChatItemAction') {
+        this.countType(this.debug.actionTypes, at)
+        this.addItem(action.item)
+      } else {
+        this.noteAction('chat', at, action)
+      }
     })
+
+    // Panel, banner, polling, dsb. Gift yang tidak lewat pesan chat bisa saja muncul di sini
+    on('ui-update', (action: any) => this.noteAction('ui', String(action?.type ?? 'unknown'), action))
 
     on('metadata-update', (md: any) => {
       const views = md?.views
@@ -490,6 +592,7 @@ export class YouTubeService {
 
   private addItem(item: any): void {
     const type = String(item?.type ?? '')
+    this.countType(this.debug.itemTypes, type || 'unknown')
     let msg: { text: string; parts?: ChatPart[] } = { text: '' }
     let paid: PaidInfo | undefined
 
@@ -504,13 +607,20 @@ export class YouTubeService {
       msg = item.header_subtext?.runs?.length ? readMessage(item.header_subtext) : readMessage(item.header_primary_text)
       paid = { kind: 'member' }
     } else {
-      return
+      // Jenis item lain: catat untuk diagnostik. Yang namanya mirip gift (Jewels / Crystal) ditampilkan bila
+      // ada teks atau nominal yang bisa dibaca; selain itu (pesan sistem, polling, dsb.) diabaikan.
+      this.noteUnknownItem(type, item)
+      if (!GIFT_TYPE.test(type)) return
+      const g = giftOf(item)
+      if (!g.msg.text && !g.msg.parts && !g.amount) return
+      msg = g.msg
+      paid = { kind: 'gift', amount: g.amount }
     }
     if (!msg.text && !msg.parts && !paid) return
     this.sampleEmoji(item.message ?? item.header_subtext)
 
     const a = item.author
-    const nick = str(a?.name) || 'Penonton'
+    const nick = str(a?.name) || viewText(item?.author_name) || 'Penonton'
     const user = str(a?.id) || nick
     this.markSeen(user)
     this.chats.push({ id: ++this.seq, platform: 'youtube', user, nick, text: msg.text, parts: msg.parts, avatar: avatarOf(a), paid })
@@ -521,6 +631,29 @@ export class YouTubeService {
     if (!id || this.seen.has(id) || this.seen.size >= SEEN_CAP) return
     this.seen.add(id)
     this.recomputeTotal()
+  }
+
+  /** Catat aksi chat selain pesan biasa (ticker, banner, panel): jumlahnya dan contoh isinya */
+  private noteAction(source: 'chat' | 'ui', type: string, action: any): void {
+    const sub = action?.item?.type ? `>${String(action.item.type)}` : ''
+    const key = `${source === 'ui' ? 'ui:' : ''}${type}${sub}`
+    this.countType(this.debug.actionTypes, key)
+    const d = this.debug
+    if (d.actionSamples.length >= 8 || d.actionSamples.some((s) => s.startsWith(`${key}:`))) return
+    const hits = scanKeys(action, 'action', 6, 30, /gift|jewel|crystal|amount|purchase|price|product|virtual|sticker|text|header|message|name|item/i)
+    d.actionSamples.push(`${key}: ${hits.join(' ; ') || '(tidak ada field yang cocok)'}`.slice(0, 800))
+  }
+
+  private countType(map: Record<string, number>, key: string): void {
+    if (map[key] !== undefined || Object.keys(map).length < 40) map[key] = (map[key] ?? 0) + 1
+  }
+
+  /** Simpan contoh isi item chat yang tidak dikenal (field bernama gift/jewel/crystal/harga/teks, dsb.) */
+  private noteUnknownItem(type: string, item: any): void {
+    const d = this.debug
+    if (d.unknownSamples.length >= 6 || d.unknownSamples.some((s) => s.startsWith(`${type}:`))) return
+    const hits = scanKeys(item, 'item', 5, 25, /gift|jewel|crystal|amount|purchase|price|product|virtual|sticker|text|header|message|name/i)
+    d.unknownSamples.push(`${type}: ${hits.join(' ; ') || '(tidak ada field yang cocok)'}`.slice(0, 700))
   }
 
   /** Simpan beberapa contoh struktur emoji mentah untuk laporan diagnostik */

@@ -5,7 +5,6 @@
 A lightweight overlay for following **TikTok** and **YouTube** live streams in a small floating window on top of
 other apps (for example games). It shows comments, current viewers, total viewers, and likes in real time.
 
-> **Status: beta.** This app is still being tested and may have bugs. Found a problem? See
 > [Reporting problems](#reporting-problems).
 
 Built with Electron, Preact, and TypeScript. It uses [`tiktok-live-connector`](https://github.com/zerodytrash/TikTok-Live-Connector)
@@ -72,6 +71,10 @@ Position, size, and all settings are saved automatically.
 - `tiktok-live-connector` is an unofficial library. It can stop working if TikTok changes its systems, and it can be
   rate limited. If that happens often, update it: `npm update tiktok-live-connector`.
 - Optional: set a Euler Stream API key in Settings (or the `EULER_API_KEY` environment variable) to reduce rate limiting.
+- TikTok's built-in emoji are sent as text codes such as `[laughcry]`. The app replaces them with the closest Unicode emoji
+  (the original artwork only exists inside the TikTok app, so the look is not identical). Unknown codes are left as-is and
+  listed in the *TikTok connection diagnostics*. To add one, edit `src/shared/tiktokEmoji.ts` (one line per code).
+  Creator emotes that come with an image are shown as images.
 - TikTok "Total" is an estimate: unique viewers detected (joins, comments, likes, gifts) since Connect, at least as
   large as the peak viewer count.
 
@@ -81,6 +84,9 @@ Position, size, and all settings are saved automatically.
 - "Total" is YouTube's own total view count (`view_count`). It and the like count are re-fetched every 60 seconds,
   while current viewers update every few seconds. YouTube itself raises the total in chunks, so the number may
   look stuck for a while and then jump.
+- YouTube Gifts (Jewels / Crystals) that reach the chat appear as a purple row with the gift icon and its amount, for
+  example "Gift 100". The gift animation over the video is not shown. This has only been tested with one kind of gift;
+  if a gift does not show up, send the *Diagnostik YouTube* report (the "tipe item chat" section).
 - Chat history from before you connected is not loaded. Streams with chat disabled, private streams, and
   members-only streams cannot be read.
 
