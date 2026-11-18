@@ -33,6 +33,8 @@ export interface ChatItem {
   paid?: PaidInfo
   /** Hanya diisi bila komentar memuat emoji gambar; jika tidak ada, pakai `text` */
   parts?: ChatPart[]
+  /** Hanya TikTok: baris notifikasi (bukan komentar) yang ditampilkan di daftar chat */
+  notice?: 'follow' | 'share'
 }
 
 export type EventKind = 'join' | 'follow' | 'share'

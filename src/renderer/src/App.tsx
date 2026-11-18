@@ -13,19 +13,14 @@ import { Watermark } from './components/Watermark'
 const MAX_CHATS = 100
 const MAX_GIFTS = 15
 const EVENT_TTL_MS = 10_000
-/** follow/share tidak langsung digeser oleh notifikasi join yang sangat sering */
-const HOLD_MS = 4000
 /** join baru tidak menimpa join sebelumnya sebelum waktu ini (hindari berkedip) */
 const JOIN_MIN_MS = 1500
 
-/** Gabungkan notifikasi baru ke satu slot tampilan: yang terbaru menang, join tidak menimpa follow/share yang baru */
+/** Gabungkan notifikasi (join) baru ke satu slot tampilan: yang terbaru menang, tapi tidak lebih cepat dari JOIN_MIN_MS */
 function mergeEvent(prev: LiveEvent[], incoming: EventItem[], now: number): LiveEvent[] {
   let cur: LiveEvent | undefined = prev[prev.length - 1]
   for (const e of incoming) {
-    if (cur && e.kind === 'join') {
-      const age = now - cur.t
-      if (cur.kind !== 'join' ? age < HOLD_MS : age < JOIN_MIN_MS) continue
-    }
+    if (cur && now - cur.t < JOIN_MIN_MS) continue
     cur = { id: e.id, kind: e.kind, nick: e.nick, t: now }
   }
   return cur ? [cur] : []
@@ -69,22 +64,27 @@ export function App() {
 
     const offBatch = window.overlay.onBatch((b) => {
       if (b.stats) (b.platform === 'youtube' ? setYtStats : setTtStats)(b.stats)
-      if (b.chats.length) {
+      // follow dan share tampil di daftar chat bersama komentar; hanya join yang tetap di ticker bawah
+      const s = settingsRef.current
+      const joins: EventItem[] = []
+      const notices: ChatItem[] = []
+      for (const e of b.events ?? []) {
+        if (e.kind === 'join') {
+          if (!s || s.showJoin) joins.push(e)
+        } else if (!s || (e.kind === 'follow' ? s.showFollow : s.showShare)) {
+          notices.push({ id: e.id, platform: b.platform, user: e.user, nick: e.nick, text: '', notice: e.kind })
+        }
+      }
+      const incoming = notices.length ? b.chats.concat(notices) : b.chats
+      if (incoming.length) {
         setChats((prev) => {
-          const next = prev.concat(b.chats)
+          const next = prev.concat(incoming)
           return next.length > MAX_CHATS ? next.slice(next.length - MAX_CHATS) : next
         })
       }
-      if (b.events?.length) {
-        const s = settingsRef.current
-        // hanya jenis yang dicentang di Pengaturan yang ikut berebut slot tampilan
-        const wanted = b.events.filter(
-          (e) => !s || (e.kind === 'join' ? s.showJoin : e.kind === 'follow' ? s.showFollow : s.showShare)
-        )
-        if (wanted.length) {
-          const now = Date.now()
-          setEvents((prev) => mergeEvent(prev, wanted, now))
-        }
+      if (joins.length) {
+        const now = Date.now()
+        setEvents((prev) => mergeEvent(prev, joins, now))
       }
       if (b.gifts.length) {
         setGifts((prev) => b.gifts.slice().reverse().concat(prev).slice(0, MAX_GIFTS))
@@ -154,10 +154,8 @@ export function App() {
   const showSource =
     (ttBusy && ytBusy) ||
     (chats.some((c) => c.platform === 'tiktok') && chats.some((c) => c.platform === 'youtube'))
-  const tickerOn = settings.showJoin || settings.showFollow || settings.showShare
-  const shownEvents = events.filter(
-    (e) => (e.kind === 'join' && settings.showJoin) || (e.kind === 'follow' && settings.showFollow) || (e.kind === 'share' && settings.showShare)
-  )
+  const tickerOn = settings.showJoin
+  const shownEvents = events.filter((e) => e.kind === 'join' && settings.showJoin)
   const emptyText = anyBusy
     ? 'Menunggu komentar…'
     : 'Isi username TikTok atau link/handle YouTube yang sedang live, lalu klik Connect.'

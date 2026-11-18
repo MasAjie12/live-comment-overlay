@@ -206,7 +206,7 @@ input { font: inherit; color: inherit; }
 }
 .donate-btn:hover { filter: brightness(1.08); }
 
-/* ---------- event ticker (join / follow / share) ---------- */
+/* ---------- event ticker (join) ---------- */
 .ticker {
   flex: none;
   min-height: calc(var(--fs) * 1.4 + 12px);
@@ -254,6 +254,10 @@ input { font: inherit; color: inherit; }
 .paid-member .paid-amt { color: var(--live); }
 .comment.paid-gift { border-left-color: #c77dff; background: rgba(199, 125, 255, 0.12); }
 .paid-gift .paid-amt { color: #c77dff; }
+/* notifikasi follow / share di daftar chat */
+.comment.notice { margin: 2px 0; padding: 1px 8px; border-left: 3px solid var(--accent); }
+.comment.notice-share { border-left-color: var(--gift); }
+.comment.notice .comment-text { color: var(--muted); }
 .avatar { border-radius: 50%; vertical-align: -5px; margin-right: 6px; background: var(--line); }
 
 .empty { color: var(--muted); padding: 14px 4px; text-align: center; }

@@ -73,15 +73,15 @@ export function SettingsPanel({ settings, onChange }: Props) {
       </label>
       <label class="check">
         <input type="checkbox" checked={settings.showJoin} onChange={(e) => onChange({ showJoin: (e.target as HTMLInputElement).checked })} />
-        <span>Notifikasi penonton bergabung</span>
+        <span>Notifikasi penonton bergabung (di bawah)</span>
       </label>
       <label class="check">
         <input type="checkbox" checked={settings.showFollow} onChange={(e) => onChange({ showFollow: (e.target as HTMLInputElement).checked })} />
-        <span>Notifikasi follow</span>
+        <span>Notifikasi follow (di daftar chat)</span>
       </label>
       <label class="check">
         <input type="checkbox" checked={settings.showShare} onChange={(e) => onChange({ showShare: (e.target as HTMLInputElement).checked })} />
-        <span>Notifikasi share</span>
+        <span>Notifikasi share (di daftar chat)</span>
       </label>
       <label class="check">
         <input type="checkbox" checked={settings.noAnimation} onChange={(e) => onChange({ noAnimation: (e.target as HTMLInputElement).checked })} />

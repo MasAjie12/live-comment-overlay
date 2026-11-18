@@ -3,6 +3,8 @@ import type { ChatItem } from '../../../shared/types'
 import { levelTier, nameColor } from '../utils'
 import { PlatformTag } from './PlatformTag'
 
+const NOTICE_LABEL = { follow: 'mulai mengikuti', share: 'membagikan live' } as const
+
 function paidLabel(c: ChatItem): string {
   const p = c.paid
   if (!p) return ''
@@ -54,7 +56,10 @@ export function CommentList({ chats, hideAvatars, showLevel, showSource, emptyTe
           <p class="empty">{emptyText}</p>
         ) : (
           chats.map((c) => (
-            <div class={`comment item${c.paid ? ` paid paid-${c.paid.kind}` : ''}`} key={`${c.platform}-${c.id}`}>
+            <div
+              class={`comment item${c.paid ? ` paid paid-${c.paid.kind}` : ''}${c.notice ? ` notice notice-${c.notice}` : ''}`}
+              key={`${c.platform}-${c.id}`}
+            >
               {showSource ? <PlatformTag platform={c.platform} /> : null}
               {!hideAvatars && c.avatar ? <img class="avatar" src={c.avatar} referrerpolicy="no-referrer" loading="lazy" width={20} height={20} alt="" onError={(e) => ((e.currentTarget as HTMLImageElement).style.display = 'none')} /> : null}
               {showLevel && c.level ? (
@@ -67,7 +72,9 @@ export function CommentList({ chats, hideAvatars, showLevel, showSource, emptyTe
               </span>
               {c.paid ? <span class="paid-amt">{paidLabel(c)}</span> : null}
               <span class="comment-text">
-                {c.parts
+                {c.notice
+                  ? NOTICE_LABEL[c.notice]
+                  : c.parts
                   ? c.parts.map((p, i) =>
                       p.t === 'text' ? (
                         p.v
