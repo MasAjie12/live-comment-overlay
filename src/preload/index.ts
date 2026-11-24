@@ -17,6 +17,7 @@ const api: OverlayApi = {
   getMemory: () => ipcRenderer.invoke('app:memory'),
   getDiag: () => ipcRenderer.invoke('app:diag'),
   getYoutubeReport: () => ipcRenderer.invoke('youtube:report'),
+  getOverlayInfo: () => ipcRenderer.invoke('overlay:info'),
   restart: () => ipcRenderer.invoke('app:restart'),
   quit: () => ipcRenderer.invoke('app:quit'),
   openExternal: (url: string) => ipcRenderer.invoke('app:openExternal', url),

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'preact/hooks'
-import type { Diag, Settings } from '../../../shared/types'
+import type { Diag, OverlayInfo, Settings } from '../../../shared/types'
 import { LINKS, NAMES } from '../../../shared/links'
 
 interface Props {
@@ -11,12 +11,15 @@ export function SettingsPanel({ settings, onChange }: Props) {
   const [mem, setMem] = useState<number | null>(null)
   const [diag, setDiag] = useState<Diag | null>(null)
   const [ytReport, setYtReport] = useState('')
+  const [ov, setOv] = useState<OverlayInfo | null>(null)
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     let live = true
     const read = () => {
       window.overlay.getMemory().then((v) => live && setMem(v))
       window.overlay.getDiag().then((d) => live && setDiag(d))
+      window.overlay.getOverlayInfo().then((o) => live && setOv(o))
     }
     read()
     const t = setInterval(read, 3000)
@@ -63,6 +66,18 @@ export function SettingsPanel({ settings, onChange }: Props) {
         </div>
       </div>
 
+      <div class="row">
+        <span>Penanda sumber komentar</span>
+        <div class="seg">
+          <button class={settings.sourceStyle === 'text' ? 'on' : ''} onClick={() => onChange({ sourceStyle: 'text' })}>
+            Teks (TT / YT)
+          </button>
+          <button class={settings.sourceStyle === 'logo' ? 'on' : ''} onClick={() => onChange({ sourceStyle: 'logo' })}>
+            Logo
+          </button>
+        </div>
+      </div>
+
       <label class="check">
         <input type="checkbox" checked={settings.hideAvatars} onChange={(e) => onChange({ hideAvatars: (e.target as HTMLInputElement).checked })} />
         <span>Sembunyikan foto profil (lebih hemat memori)</span>
@@ -70,6 +85,10 @@ export function SettingsPanel({ settings, onChange }: Props) {
       <label class="check">
         <input type="checkbox" checked={settings.showLevel} onChange={(e) => onChange({ showLevel: (e.target as HTMLInputElement).checked })} />
         <span>Tampilkan badge level gift di komentar</span>
+      </label>
+      <label class="check">
+        <input type="checkbox" checked={settings.showTeam} onChange={(e) => onChange({ showTeam: (e.target as HTMLInputElement).checked })} />
+        <span>Tampilkan badge team (hati) di komentar TikTok</span>
       </label>
       <label class="check">
         <input type="checkbox" checked={settings.showJoin} onChange={(e) => onChange({ showJoin: (e.target as HTMLInputElement).checked })} />
@@ -115,6 +134,44 @@ export function SettingsPanel({ settings, onChange }: Props) {
       </label>
       <p class="hint">Isi jika sering gagal atau terkena rate limit (eulerstream.com). Berlaku saat Connect berikutnya.</p>
 
+      <div class="overlay-box">
+        <label class="check">
+          <input
+            type="checkbox"
+            checked={settings.overlayEnabled}
+            onChange={(e) => onChange({ overlayEnabled: (e.target as HTMLInputElement).checked })}
+          />
+          <span>Overlay untuk OBS (Browser Source, latar transparan)</span>
+        </label>
+        {settings.overlayEnabled ? (
+          ov?.url ? (
+            <div class="overlay-url">
+              <input class="input" type="text" readOnly value={ov.url} onFocus={(e) => (e.target as HTMLInputElement).select()} />
+              <button
+                class="btn-text"
+                onClick={() => {
+                  navigator.clipboard?.writeText(ov.url as string).then(
+                    () => {
+                      setCopied(true)
+                      setTimeout(() => setCopied(false), 1500)
+                    },
+                    () => undefined
+                  )
+                }}
+              >
+                {copied ? 'Tersalin' : 'Salin URL'}
+              </button>
+              <div class="overlay-hint">
+                Tempel di OBS: Sources, Add, Browser, lalu isi URL. Parameter opsional di akhir URL: &size=24 &lines=8 &fade=30
+                &tag=on &bg=1 &align=top &badges=0. Terhubung: {ov.clients}. Jangan tampilkan URL ini di layar yang kamu siarkan.
+              </div>
+            </div>
+          ) : (
+            <div class="overlay-hint">{ov?.error ?? 'Menyalakan server overlay…'}</div>
+          )
+        ) : null}
+      </div>
+
       <details class="diag">
         <summary>Diagnostik koneksi TikTok</summary>
         {diag ? (
@@ -145,6 +202,12 @@ export function SettingsPanel({ settings, onChange }: Props) {
                 : 'belum ada'}
             </div>
             <div>Pesan sosial (follow/share): {diag.socialProbe ?? 'belum ada'}</div>
+            <div>
+              Badge team (hati): terbaca di {diag.team?.withTeam ?? 0} komentar
+              {diag.team?.source ? ` (sumber: ${diag.team.source})` : ''}
+            </div>
+            {diag.team?.samples.length ? <div>Contoh struktur fansClub: {diag.team.samples.join(' | ')}</div> : null}
+            {diag.team?.badgeSamples.length ? <div>Contoh badge lain: {diag.team.badgeSamples.join(' | ')}</div> : null}
             <div>
               Emoji komentar: kode [xxx] ditemukan di {diag.emoji?.withCode ?? 0} komentar, diganti emoji{' '}
               {diag.emoji?.converted ?? 0}x, komentar beremotes gambar {diag.emoji?.withEmotes ?? 0}

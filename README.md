@@ -16,8 +16,11 @@ untuk TikTok dan [`youtubei.js`](https://github.com/LuanRT/YouTube.js) untuk You
 - TikTok dan YouTube bisa tersambung **bersamaan**. Komentar keduanya tampil dalam satu daftar; penanda sumber
   (TT / YT) muncul otomatis saat dua platform aktif.
 - Statistik per platform: penonton saat ini, total penonton, dan like.
-- TikTok: gift terbaru, badge level gifter, serta notifikasi bergabung, follow, dan share.
+- TikTok: gift terbaru, badge level gifter, badge team (hati, bila terbaca), notifikasi follow dan share (tampil di daftar chat bersama komentar), serta
+  notifikasi bergabung di bagian bawah.
 - YouTube: Super Chat, Super Sticker, dan member baru tampil sebagai baris berwarna dengan nominalnya.
+- **Overlay untuk OBS:** komentar, gift, follow, dan share bisa ditampilkan ke penonton lewat Browser Source dengan latar
+  transparan (lihat bagian *Overlay untuk OBS*).
 - Jendela selalu di atas, bisa diatur transparansinya, mode click-through, ikon tray, dan shortcut keyboard.
 - Hemat sumber daya, tanpa database, tanpa riwayat chat di disk, tanpa telemetry, tanpa auto-update.
 
@@ -61,11 +64,49 @@ saat itu, jadi matikan lagi dengan Ctrl+Shift+C atau lewat menu tray (klik kanan
 - Transparansi dan ukuran teks
 - Tampilan Lengkap atau Komentar saja
 - Sembunyikan foto profil (default aktif, lebih hemat memori)
-- Badge level gift, notifikasi join / follow / share
+- Badge level gift dan badge team (hati), notifikasi join / follow / share
+- Penanda sumber komentar: teks (TT / YT) atau logo TikTok / YouTube
 - Matikan animasi dan akselerasi GPU (untuk GPU lemah, butuh restart)
 - Diagnostik koneksi TikTok dan YouTube, serta info pemakaian memori
 
 Posisi, ukuran, dan semua pengaturan tersimpan otomatis.
+
+## Overlay untuk OBS (tampilkan komentar ke penonton)
+
+Jendela aplikasi sendiri tidak transparan dan memuat tombol serta pengaturan, jadi tidak cocok ditangkap langsung ke
+stream. Sebagai gantinya aplikasi menyediakan halaman overlay terpisah untuk **Browser Source** OBS: latar transparan,
+hanya daftar komentar, tanpa tombol.
+
+1. Buka Pengaturan (ikon gir) lalu centang **Overlay untuk OBS**. Alamat URL muncul di bawahnya; klik **Salin URL**.
+2. Di OBS: **Sources, Add, Browser**, tempel URL tadi, lalu atur lebar dan tinggi (mis. 500 x 700). Jangan
+   mencentang pengaturan yang memberi latar. Browser Source OBS transparan secara bawaan.
+3. Hubungkan TikTok dan/atau YouTube di aplikasi seperti biasa. Komentar muncul di OBS.
+
+Yang ditampilkan: komentar TikTok dan YouTube (termasuk Super Chat, member, dan gift YouTube), gift TikTok, serta
+notifikasi follow dan share. Notifikasi bergabung tidak ditampilkan.
+
+Atur tampilan lewat parameter di akhir URL, dipisah dengan `&`:
+
+| Parameter | Arti | Bawaan |
+|---|---|---|
+| `size=24` | ukuran huruf (px, 8-120) | 22 |
+| `lines=8` | jumlah baris maksimum (1-50) | 8 |
+| `fade=30` | komentar hilang setelah 30 detik (0 = tidak hilang) | 0 |
+| `tag=auto` | penanda sumber: `auto` (tampil bila dua platform aktif), `on`, `off` | auto |
+| `tagstyle=logo` | bentuk penanda sumber: `text` (TT / YT) atau `logo` (logo TikTok / YouTube) | text |
+| `bg=1` | baris berlatar gelap semi-transparan | 0 |
+| `align=top` | daftar menempel di atas (bawaan: di bawah) | bottom |
+| `badges=0` | sembunyikan badge level gift dan badge team | 1 |
+
+Contoh: `http://127.0.0.1:38457/overlay?token=...&size=26&lines=6&fade=40&bg=1`
+
+Catatan:
+- Aplikasi harus tetap terbuka di komputer yang sama dengan OBS. Jika aplikasi ditutup, komentar di stream hilang.
+- Server hanya menerima koneksi dari komputer ini (`127.0.0.1`) dan memakai token acak di URL. Jangan tampilkan URL itu di
+  layar yang kamu siarkan. Server tidak menyala kecuali kamu mencentang opsinya.
+- **Semua komentar tampil apa adanya, tanpa penyaring.** Komentar kasar atau spam akan terlihat penonton.
+- Port bawaan 38457; jika terpakai, aplikasi mencoba port berikutnya (URL di Pengaturan selalu yang terbaru).
+- Setelah OBS dimuat ulang, beberapa komentar terakhir tampil kembali (aplikasi menyimpan 60 baris terakhir di memori).
 
 ## Catatan per platform
 

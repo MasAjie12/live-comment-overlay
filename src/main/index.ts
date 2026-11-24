@@ -6,6 +6,7 @@ import { flushSettings, loadSettings, saveSettings } from './settings'
 import { LINKS, isLinkReady } from '../shared/links'
 import { TikTokService } from './tiktok'
 import { YouTubeService } from './youtube'
+import { OverlayServer } from './overlay'
 import type { Settings } from '../shared/types'
 
 /* ---------- Log startup & error ---------- */
@@ -88,6 +89,7 @@ let tray: Tray | null = null
 let quitting = false
 const service = new TikTokService(() => win)
 const youtube = new YouTubeService(() => win)
+const overlay = new OverlayServer()
 
 function boundsVisible(b: NonNullable<Settings['bounds']>): boolean {
   return screen.getAllDisplays().some((d) => {
@@ -208,12 +210,14 @@ function createTray(): void {
 function registerIpc(): void {
   ipcMain.handle('settings:get', () => loadSettings())
 
-  ipcMain.handle('settings:set', (_e, patch: Partial<Settings>) => {
+  ipcMain.handle('settings:set', async (_e, patch: Partial<Settings>) => {
     const next = saveSettings(patch ?? {})
     if (patch && 'opacity' in patch) win?.setOpacity(next.opacity)
     if (patch && 'clickThrough' in patch) applyClickThrough(next.clickThrough)
-    return next
+    if (patch && 'overlayEnabled' in patch) await overlay.apply(next.overlayEnabled)
+    return loadSettings()
   })
+  ipcMain.handle('overlay:info', () => overlay.status())
 
   ipcMain.handle('tiktok:connect', async (_e, username: string) => {
     saveSettings({ username: String(username ?? '') })
@@ -268,6 +272,9 @@ app.whenReady().then(() => {
     logError('createTray', e) // tray gagal tidak boleh membatalkan aplikasi
   }
 
+  // Server overlay OBS: hanya jalan bila diaktifkan di Pengaturan
+  if (loadSettings().overlayEnabled) void overlay.apply(true).catch((e) => logError('overlay', e))
+
   globalShortcut.register('CommandOrControl+Shift+O', toggleVisible)
   globalShortcut.register('CommandOrControl+Shift+C', () => applyClickThrough(!loadSettings().clickThrough))
 })
@@ -277,6 +284,7 @@ app.on('before-quit', () => {
   flushSettings()
   service.dispose()
   youtube.dispose()
+  overlay.dispose()
   globalShortcut.unregisterAll()
 })
 

@@ -12,11 +12,12 @@ interface Props {
   /** nama yang ditampilkan saat terhubung (mis. @user atau nama channel) */
   name: string
   autoFocus?: boolean
+  sourceStyle?: 'text' | 'logo'
   onConnect(value: string): void
   onDisconnect(): void
 }
 
-export function ConnectForm({ platform, initial, placeholder, state, message, name, autoFocus, onConnect, onDisconnect }: Props) {
+export function ConnectForm({ platform, initial, placeholder, state, message, name, autoFocus, sourceStyle = 'text', onConnect, onDisconnect }: Props) {
   const [value, setValue] = useState(initial)
   const submit = () => onConnect(value)
 
@@ -24,7 +25,7 @@ export function ConnectForm({ platform, initial, placeholder, state, message, na
     return (
       <div class="connect-live">
         <div class="connect-live-row">
-          <PlatformTag platform={platform} />
+          <PlatformTag platform={platform} mode={sourceStyle} />
           <span class={`dot dot-${state}`} aria-hidden="true" />
           <span class="connect-live-name">{state === 'connected' && name ? name : STATE_LABEL[state]}</span>
           <span class="spacer" />
@@ -40,7 +41,7 @@ export function ConnectForm({ platform, initial, placeholder, state, message, na
   return (
     <div class="connect">
       <div class="connect-row">
-        <PlatformTag platform={platform} />
+        <PlatformTag platform={platform} mode={sourceStyle} />
         <input
           class="input"
           type="text"

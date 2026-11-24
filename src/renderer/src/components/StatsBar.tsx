@@ -8,13 +8,13 @@ export interface StatRow {
 }
 
 /** Satu baris statistik per platform yang aktif */
-export function StatsBar({ rows }: { rows: StatRow[] }) {
+export function StatsBar({ rows, sourceStyle = 'text' }: { rows: StatRow[]; sourceStyle?: 'text' | 'logo' }) {
   return (
     <section class="stats" aria-label="Statistik live">
       {rows.map(({ platform, stats }) => (
         <div class="stats-row" key={platform}>
           <div class="stats-src">
-            <PlatformTag platform={platform} />
+            <PlatformTag platform={platform} mode={sourceStyle} />
           </div>
           <div class="stat">
             <b>{fmt(stats.viewers)}</b>

@@ -11,6 +11,9 @@ const defaults: Settings = {
   fontSize: 13,
   hideAvatars: true,
   showLevel: true,
+  showTeam: true,
+  sourceStyle: 'text',
+  overlayEnabled: false,
   showJoin: true,
   showFollow: true,
   showShare: true,
@@ -51,6 +54,10 @@ export function saveSettings(patch: Partial<Settings>): Settings {
   if ('fontSize' in patch) next.fontSize = clamp(patch.fontSize, 11, 20, cur.fontSize)
   if (typeof patch.hideAvatars === 'boolean') next.hideAvatars = patch.hideAvatars
   if (typeof patch.showLevel === 'boolean') next.showLevel = patch.showLevel
+  if (typeof patch.showTeam === 'boolean') next.showTeam = patch.showTeam
+  if (patch.sourceStyle === 'text' || patch.sourceStyle === 'logo') next.sourceStyle = patch.sourceStyle
+  if (typeof patch.overlayEnabled === 'boolean') next.overlayEnabled = patch.overlayEnabled
+  if (typeof patch.overlayToken === 'string' && /^[0-9a-f]{32}$/.test(patch.overlayToken)) next.overlayToken = patch.overlayToken
   if (typeof patch.showJoin === 'boolean') next.showJoin = patch.showJoin
   if (typeof patch.showFollow === 'boolean') next.showFollow = patch.showFollow
   if (typeof patch.showShare === 'boolean') next.showShare = patch.showShare

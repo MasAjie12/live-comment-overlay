@@ -18,12 +18,16 @@ interface Props {
   chats: ChatItem[]
   hideAvatars: boolean
   showLevel: boolean
+  /** tampilkan badge team (hati) TikTok */
+  showTeam: boolean
+  /** bentuk penanda sumber: teks atau logo */
+  sourceStyle: 'text' | 'logo'
   /** tampilkan penanda sumber (TT/YT) di tiap komentar */
   showSource: boolean
   emptyText: string
 }
 
-export function CommentList({ chats, hideAvatars, showLevel, showSource, emptyText }: Props) {
+export function CommentList({ chats, hideAvatars, showLevel, showTeam, sourceStyle, showSource, emptyText }: Props) {
   const box = useRef<HTMLDivElement>(null)
   const stick = useRef(true)
   const [away, setAway] = useState(false)
@@ -60,11 +64,19 @@ export function CommentList({ chats, hideAvatars, showLevel, showSource, emptyTe
               class={`comment item${c.paid ? ` paid paid-${c.paid.kind}` : ''}${c.notice ? ` notice notice-${c.notice}` : ''}`}
               key={`${c.platform}-${c.id}`}
             >
-              {showSource ? <PlatformTag platform={c.platform} /> : null}
+              {showSource ? <PlatformTag platform={c.platform} mode={sourceStyle} /> : null}
               {!hideAvatars && c.avatar ? <img class="avatar" src={c.avatar} referrerpolicy="no-referrer" loading="lazy" width={20} height={20} alt="" onError={(e) => ((e.currentTarget as HTMLImageElement).style.display = 'none')} /> : null}
               {showLevel && c.level ? (
                 <span class={`lv lv-${levelTier(c.level)}`} title={`Level gift ${c.level}`}>
                   {c.level}
+                </span>
+              ) : null}
+              {showTeam && c.team ? (
+                <span class={`team${c.team >= 10 ? ' team-2' : ''}`} title={`Level team ${c.team}`}>
+                  <svg viewBox="0 0 24 22" aria-hidden="true">
+                    <path d="M12 21S4 15.8 4 10a4.6 4.6 0 0 1 8-3.1A4.6 4.6 0 0 1 20 10c0 5.8-8 11-8 11z" fill="currentColor" />
+                  </svg>
+                  <b>{c.team}</b>
                 </span>
               ) : null}
               <span class="comment-name" style={{ color: nameColor(c.user || c.nick) }}>

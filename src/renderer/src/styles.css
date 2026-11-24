@@ -104,6 +104,9 @@ input { font: inherit; color: inherit; }
 .src-tiktok { background: #25f4ee; color: #06222b; }
 .src-youtube { background: #ff3030; color: #fff; }
 .comment .src { margin-right: 5px; }
+/* penanda sumber berbentuk logo */
+.src.src-logo { background: none; padding: 0; min-width: 0; width: 1.3em; height: 1.3em; vertical-align: -0.28em; }
+.src-logo svg { width: 100%; height: 100%; display: block; }
 .input {
   flex: 1; min-width: 0;
   padding: 6px 9px;
@@ -255,6 +258,16 @@ input { font: inherit; color: inherit; }
 .comment.paid-gift { border-left-color: #c77dff; background: rgba(199, 125, 255, 0.12); }
 .paid-gift .paid-amt { color: #c77dff; }
 /* notifikasi follow / share di daftar chat */
+/* overlay OBS di Pengaturan */
+.overlay-box { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+.overlay-url { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px; }
+.overlay-url .input { flex: 1 1 160px; min-width: 0; }
+.overlay-hint { flex-basis: 100%; font-size: 0.85em; color: var(--muted); line-height: 1.4; }
+/* badge team (fans club): hati oranye dengan angka level */
+.team { position: relative; display: inline-block; width: 1.5em; height: 1.4em; vertical-align: -0.32em; margin-right: 4px; color: #ff8a3d; }
+.team svg { width: 100%; height: 100%; display: block; }
+.team b { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding-bottom: 0.12em; font-size: 0.62em; font-weight: 800; color: #fff; }
+.team-2 b { font-size: 0.5em; }
 .comment.notice { margin: 2px 0; padding: 1px 8px; border-left: 3px solid var(--accent); }
 .comment.notice-share { border-left-color: var(--gift); }
 .comment.notice .comment-text { color: var(--muted); }

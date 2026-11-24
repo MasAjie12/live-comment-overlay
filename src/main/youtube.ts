@@ -1,4 +1,5 @@
 import type { BrowserWindow } from 'electron'
+import { publishBatch } from './bus'
 import type { Batch, ChatItem, ChatPart, ConnState, PaidInfo, Stats, StatusPayload } from '../shared/types'
 
 const MAX_PENDING_CHATS = 100
@@ -816,6 +817,7 @@ export class YouTubeService {
     }
     this.chats = []
     this.statsDirty = false
+    publishBatch(batch)
     const w = this.getWindow()
     if (w && !w.isDestroyed()) w.webContents.send('live:batch', batch)
   }

@@ -181,6 +181,7 @@ export function App() {
           message={tt.message}
           name={ttName}
           autoFocus
+          sourceStyle={settings.sourceStyle}
           onConnect={connectTiktok}
           onDisconnect={() => window.overlay.disconnect()}
         />
@@ -191,6 +192,7 @@ export function App() {
           state={yt.state}
           message={yt.message}
           name={ytName}
+          sourceStyle={settings.sourceStyle}
           onConnect={connectYoutube}
           onDisconnect={() => window.overlay.disconnectYoutube()}
         />
@@ -198,12 +200,12 @@ export function App() {
 
       {settings.mode === 'full' && statRows.length ? (
         <>
-          <StatsBar rows={statRows} />
+          <StatsBar rows={statRows} sourceStyle={settings.sourceStyle} />
           {tt.state !== 'idle' ? <GiftList gifts={gifts} /> : null}
         </>
       ) : null}
 
-      <CommentList chats={chats} hideAvatars={settings.hideAvatars} showLevel={settings.showLevel} showSource={showSource} emptyText={emptyText} />
+      <CommentList chats={chats} hideAvatars={settings.hideAvatars} showLevel={settings.showLevel} showTeam={settings.showTeam} sourceStyle={settings.sourceStyle} showSource={showSource} emptyText={emptyText} />
       {tickerOn && tt.state !== 'idle' ? <EventTicker events={shownEvents} /> : null}
       <Watermark />
     </div>

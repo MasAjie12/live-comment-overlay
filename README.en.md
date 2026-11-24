@@ -15,8 +15,11 @@ for TikTok and [`youtubei.js`](https://github.com/LuanRT/YouTube.js) for YouTube
 - TikTok and YouTube can be connected **at the same time**. Comments from both appear in a single list; a source
   tag (TT / YT) shows up automatically when both platforms are active.
 - Per-platform stats: current viewers, total viewers, and likes.
-- TikTok: recent gifts, gifter level badge, and join, follow, and share notifications.
+- TikTok: recent gifts, gifter level badge, team badge (heart, when readable), follow and share notifications (shown in the chat list with comments), and
+  join notifications at the bottom.
 - YouTube: Super Chats, Super Stickers, and new members appear as colored rows with the amount.
+- **OBS overlay:** comments, gifts, follows, and shares can be shown to your viewers through a Browser Source with a
+  transparent background (see *OBS overlay*).
 - Always-on-top window with adjustable opacity, click-through mode, tray icon, and keyboard shortcuts.
 - Lightweight: no database, no chat history on disk, no telemetry, no auto-update.
 
@@ -59,11 +62,49 @@ cannot be clicked at that point, so turn it off again with Ctrl+Shift+C or from 
 - Opacity and text size
 - Full view or comments only
 - Hide profile pictures (on by default, saves memory)
-- Gift level badge, join / follow / share notifications
+- Gift level and team (heart) badges, join / follow / share notifications
+- Comment source marker: text (TT / YT) or TikTok / YouTube logo
 - Disable animations and GPU acceleration (for weak GPUs, requires restart)
 - TikTok and YouTube connection diagnostics, plus memory usage info
 
 Position, size, and all settings are saved automatically.
+
+## OBS overlay (show comments to your viewers)
+
+The app window itself is not transparent and contains buttons and settings, so it is not suitable for capturing into a
+stream. Instead the app provides a separate overlay page for an OBS **Browser Source**: transparent background, comment
+list only, no buttons.
+
+1. Open Settings (gear icon) and tick **Overlay untuk OBS**. The URL appears below it; click **Salin URL**.
+2. In OBS: **Sources, Add, Browser**, paste the URL, and set the width and height (for example 500 x 700). OBS Browser
+   Sources are transparent by default.
+3. Connect TikTok and/or YouTube in the app as usual. Comments show up in OBS.
+
+Shown: TikTok and YouTube comments (including YouTube Super Chats, members, and gifts), TikTok gifts, and follow and share
+notifications. Join notifications are not shown.
+
+Adjust the look with parameters at the end of the URL, separated by `&`:
+
+| Parameter | Meaning | Default |
+|---|---|---|
+| `size=24` | font size (px, 8-120) | 22 |
+| `lines=8` | maximum number of rows (1-50) | 8 |
+| `fade=30` | comments disappear after 30 seconds (0 = never) | 0 |
+| `tag=auto` | source tag: `auto` (shown when both platforms are active), `on`, `off` | auto |
+| `tagstyle=logo` | shape of the source tag: `text` (TT / YT) or `logo` (TikTok / YouTube logo) | text |
+| `bg=1` | rows get a semi-transparent dark background | 0 |
+| `align=top` | list sticks to the top (default: bottom) | bottom |
+| `badges=0` | hide the gift level and team badges | 1 |
+
+Example: `http://127.0.0.1:38457/overlay?token=...&size=26&lines=6&fade=40&bg=1`
+
+Notes:
+- The app must stay open on the same computer as OBS. If you close the app, the comments disappear from the stream.
+- The server only accepts connections from this computer (`127.0.0.1`) and uses a random token in the URL. Do not show the
+  URL on a screen you broadcast. The server does not run unless you tick the option.
+- **All comments are shown as they are, with no filter.** Rude comments or spam will be visible to your viewers.
+- Default port 38457; if it is in use the app tries the next ones (the URL in Settings is always the current one).
+- After OBS reloads the source, the last few comments appear again (the app keeps the last 60 rows in memory).
 
 ## Notes per platform
 

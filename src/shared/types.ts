@@ -35,6 +35,8 @@ export interface ChatItem {
   parts?: ChatPart[]
   /** Hanya TikTok: baris notifikasi (bukan komentar) yang ditampilkan di daftar chat */
   notice?: 'follow' | 'share'
+  /** Hanya TikTok: level team (fans club, ikon hati) pengirim komentar, jika terbaca */
+  team?: number
 }
 
 export type EventKind = 'join' | 'follow' | 'share'
@@ -96,6 +98,8 @@ export interface Diag {
   notif?: Record<string, number>
   /** nama field (bukan isi) dari pesan pertama tiap jenis, untuk membantu pencocokan */
   fields: Record<string, string[]>
+  /** badge team (fans club): jumlah komentar yang levelnya terbaca, lokasi field, dan contoh struktur */
+  team?: { withTeam: number; source?: string; samples: string[]; badgeSamples: string[] }
   /** statistik emoji pada komentar */
   emoji?: {
     /** komentar yang memuat kode [xxx] */
@@ -121,6 +125,14 @@ export interface Settings {
   hideAvatars: boolean
   /** Tampilkan badge level gifter di komentar */
   showLevel: boolean
+  /** Tampilkan badge team (fans club, ikon hati) di komentar TikTok */
+  showTeam: boolean
+  /** Penanda sumber komentar: teks (TT / YT) atau logo TikTok / YouTube */
+  sourceStyle: 'text' | 'logo'
+  /** Aktifkan server overlay untuk OBS (Browser Source) di komputer ini */
+  overlayEnabled: boolean
+  /** Token acak untuk URL overlay (dibuat otomatis oleh aplikasi) */
+  overlayToken?: string
   /** Notifikasi di bawah komentar */
   showJoin: boolean
   showFollow: boolean
@@ -131,6 +143,16 @@ export interface Settings {
   bounds?: { x: number; y: number; width: number; height: number }
   /** Opsional: API key Euler Stream (untuk mengurangi rate limit). Isi manual di settings.json */
   signApiKey?: string
+}
+
+/** Status server overlay OBS */
+export interface OverlayInfo {
+  enabled: boolean
+  /** URL lengkap untuk dimasukkan ke Browser Source di OBS */
+  url?: string
+  /** jumlah halaman overlay yang sedang terhubung */
+  clients: number
+  error?: string
 }
 
 export interface OverlayApi {
@@ -145,6 +167,8 @@ export interface OverlayApi {
   getDiag(): Promise<Diag>
   /** Laporan diagnostik YouTube (teks) untuk mencari field total penonton */
   getYoutubeReport(): Promise<string>
+  /** Status server overlay OBS (alamat URL, jumlah koneksi, error) */
+  getOverlayInfo(): Promise<OverlayInfo>
   restart(): Promise<void>
   quit(): Promise<void>
   /** Buka link di browser. Hanya link yang terdaftar di shared/links.ts yang diizinkan */

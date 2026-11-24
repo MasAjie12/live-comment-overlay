@@ -1,6 +1,7 @@
 import type { BrowserWindow } from 'electron'
 import type { Batch, ChatItem, ChatPart, ConnState, Diag, EventItem, EventKind, GiftItem, Stats, StatusPayload } from '../shared/types'
 import { convertTikTokEmoji } from '../shared/tiktokEmoji'
+import { publishBatch } from './bus'
 import { loadSettings } from './settings'
 
 const MAX_PENDING_CHATS = 100
@@ -171,6 +172,59 @@ function giftLevelOf(d: any): { level?: number; source?: string } {
   return {}
 }
 
+/** Angka level dari satu badge (urutan lokasi sama dengan level gifter) */
+function badgeLevelOf(b: any): number | undefined {
+  const cands = [b?.privilegeLogExtra?.level, b?.level, b?.combine?.str, b?.text?.defaultPattern, b?.str]
+  for (const c of cands) {
+    const m = String(c ?? '').match(/\d+/)
+    const level = m ? validLevel(m[0]) : undefined
+    if (level) return level
+  }
+  return undefined
+}
+
+/** Badge team (fans club): sceneType 10 (FANS), atau nama enum / gambar yang menyebut fans club */
+const isTeamBadge = (b: any): boolean => {
+  const t = b?.sceneType ?? b?.badgeSceneType ?? b?.scene
+  if (t === 10 || t === '10' || /FANS|FAN_?CLUB|TEAM/i.test(String(t ?? ''))) return true
+  const img = String(b?.image?.urlList?.[0] ?? b?.combine?.icon?.urlList?.[0] ?? '')
+  return /fans?_?club/i.test(img)
+}
+
+/**
+ * Ambil level team (fans club, ikon hati) dari data user. Lokasi yang dicoba berurutan:
+ * 1) user.fansClub.data.level, lalu user.fansClub.preferData[*].level
+ * 2) daftar badge: badge bertipe FANS (sceneType 10), level dibaca seperti level gifter
+ * Nama field belum terverifikasi pada semua live; `source` dan contoh struktur dicatat di Diagnostik.
+ */
+function teamLevelOf(d: any): { level?: number; source?: string } {
+  const u = d?.user ?? d
+  const fc = u?.fansClub
+  const cands: Array<[string, any]> = [
+    ['user.fansClub.data', fc?.data],
+    ['user.fansClub', fc]
+  ]
+  if (fc?.preferData && typeof fc.preferData === 'object') {
+    for (const v of Object.values(fc.preferData)) cands.push(['user.fansClub.preferData', v])
+  }
+  for (const [source, data] of cands) {
+    const level = validLevel(data?.level)
+    if (level) return { level, source }
+  }
+  for (const key of ['badgeList', 'badges', 'userBadges']) {
+    for (const holder of [u, d]) {
+      const list = holder?.[key]
+      if (!Array.isArray(list)) continue
+      for (const b of list) {
+        if (!isTeamBadge(b)) continue
+        const level = badgeLevelOf(b)
+        if (level) return { level, source: `${holder === u ? 'user.' : ''}${key}[FANS]` }
+      }
+    }
+  }
+  return {}
+}
+
 /** URL gambar emote (emote kustom kreator) dari satu elemen field `emotes`, hanya https */
 function emoteImage(e: any): string | undefined {
   const cands = [e?.emote?.image?.imageUrl, e?.emote?.image?.urlList?.[0], e?.image?.imageUrl, e?.image?.urlList?.[0], e?.imageUrl]
@@ -306,7 +360,8 @@ export class TikTokService {
       events: { ...this.diag.events },
       fields: { ...this.diag.fields },
       notif: { ...this.diag.notif },
-      emoji: this.diag.emoji && { ...this.diag.emoji, unknown: { ...this.diag.emoji.unknown } }
+      emoji: this.diag.emoji && { ...this.diag.emoji, unknown: { ...this.diag.emoji.unknown } },
+      team: this.diag.team && { ...this.diag.team, samples: [...this.diag.team.samples], badgeSamples: [...this.diag.team.badgeSamples] }
     }
   }
 
@@ -463,9 +518,11 @@ export class TikTokService {
         const u = userOf(d)
         this.markSeen(u.id)
         const lv = giftLevelOf(d)
+        const team = teamLevelOf(d)
+        this.noteTeam(d?.user ?? d, team)
         this.probeLevel(d)
         if (lv.level && !this.diag.levelSource) this.diag.levelSource = lv.source
-        this.chats.push({ id: ++this.seq, platform: 'tiktok', user: u.user, nick: u.nick || u.user, text: built.text, parts: built.parts, avatar: u.avatar, level: lv.level })
+        this.chats.push({ id: ++this.seq, platform: 'tiktok', user: u.user, nick: u.nick || u.user, text: built.text, parts: built.parts, avatar: u.avatar, level: lv.level, team: team.level })
         if (this.chats.length > MAX_PENDING_CHATS) this.chats.splice(0, this.chats.length - MAX_PENDING_CHATS)
         return true
       }
@@ -578,6 +635,57 @@ export class TikTokService {
     if (list.length < 6 && !list.includes(entry)) {
       list.push(entry)
       this.diag.socialProbe = list.join(' ; ')
+    }
+  }
+
+  /** Catat statistik badge team untuk Diagnostik: jumlah yang terbaca dan contoh struktur fansClub (tanpa gambar) */
+  private noteTeam(u: any, t: { level?: number; source?: string }): void {
+    const e = this.diag.team ?? (this.diag.team = { withTeam: 0, samples: [], badgeSamples: [] })
+    if (t.level) {
+      e.withTeam++
+      if (!e.source) e.source = t.source
+    }
+    this.noteBadges(u, e)
+    const fc = u?.fansClub
+    if (!fc || typeof fc !== 'object' || e.samples.length >= 4) return
+    const data = fc?.data && typeof fc.data === 'object' ? fc.data : fc
+    const pick = (k: string): unknown => {
+      const v = data?.[k]
+      return v !== null && typeof v === 'object' ? (typeof (v as any).toNumber === 'function' ? toNum(v) : '[obj]') : v
+    }
+    const sample = JSON.stringify({
+      keys: Object.keys(fc).slice(0, 8),
+      dataKeys: Object.keys(data ?? {}).slice(0, 12),
+      clubName: pick('clubName'),
+      level: pick('level'),
+      status: pick('userFansClubStatus')
+    }).slice(0, 300)
+    if (!e.samples.includes(sample)) e.samples.push(sample)
+  }
+
+  /** Contoh badge selain level gifter (sceneType, tipe tampilan, dan lokasi angka) untuk mencari badge team */
+  private noteBadges(u: any, e: NonNullable<Diag['team']>): void {
+    if (e.badgeSamples.length >= 5) return
+    for (const key of ['badgeList', 'badges']) {
+      const list = u?.[key]
+      if (!Array.isArray(list)) continue
+      for (const b of list) {
+        if (isGradeBadge(b) || e.badgeSamples.length >= 5) continue
+        const scene = b?.sceneType ?? b?.badgeSceneType ?? b?.scene
+        const img = String(b?.image?.urlList?.[0] ?? b?.combine?.icon?.urlList?.[0] ?? '')
+        const sample = [
+          `scene=${String(scene)}`,
+          `display=${String(b?.displayType)}`,
+          `extraLevel=${String(b?.privilegeLogExtra?.level ?? '')}`,
+          `level=${String(b?.level ?? '')}`,
+          `combineStr=${String(b?.combine?.str ?? '')}`,
+          `str=${String(b?.str ?? '')}`,
+          `text=${String(b?.text?.defaultPattern ?? '').slice(0, 40)}`,
+          `img=${img.split('?')[0].split('/').slice(-2).join('/')}`,
+          `terbaca=${isTeamBadge(b) ? String(badgeLevelOf(b) ?? 'tidak') : 'bukan badge team'}`
+        ].join(' ')
+        if (!e.badgeSamples.includes(sample)) e.badgeSamples.push(sample)
+      }
     }
   }
 
@@ -722,6 +830,7 @@ export class TikTokService {
     this.gifts = []
     this.events = []
     this.statsDirty = false
+    publishBatch(batch)
     const w = this.getWindow()
     if (w && !w.isDestroyed()) w.webContents.send('live:batch', batch)
     // data akhirnya masuk: hapus peringatan "belum ada data"
